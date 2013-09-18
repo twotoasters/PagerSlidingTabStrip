@@ -16,6 +16,7 @@
 
 package com.astuetz.viewpager.extensions;
 
+import java.util.List;
 import java.util.Locale;
 
 import android.annotation.SuppressLint;
@@ -89,8 +90,12 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
 
 	private int tabTextSize = 12;
 	private int tabTextColor = 0xFF666666;
+	private int indicatorTextColor = -1;
+	private int disabledTextColor = -1;
 	private Typeface tabTypeface = null;
 	private int tabTypefaceStyle = Typeface.BOLD;
+	
+	private List<Integer> disabledIndices;
 
 	private int lastScrollX = 0;
 
@@ -151,6 +156,8 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
 		shouldExpand = a.getBoolean(R.styleable.PagerSlidingTabStrip_shouldExpand, shouldExpand);
 		scrollOffset = a.getDimensionPixelSize(R.styleable.PagerSlidingTabStrip_scrollOffset, scrollOffset);
 		textAllCaps = a.getBoolean(R.styleable.PagerSlidingTabStrip_textAllCapsPSTS, textAllCaps);
+		indicatorTextColor = a.getColor(R.styleable.PagerSlidingTabStrip_indicatorTextColor, indicatorTextColor);
+		disabledTextColor = a.getColor(R.styleable.PagerSlidingTabStrip_disabledTextColor, disabledTextColor);
 
 		a.recycle();
 
@@ -242,7 +249,6 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
 		});
 
 		tabsContainer.addView(tab);
-
 	}
 
 	private void addIconTab(final int position, int resId) {
@@ -257,7 +263,7 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
 				pager.setCurrentItem(position);
 			}
 		});
-
+		
 		tabsContainer.addView(tab);
 
 	}
@@ -275,13 +281,17 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
 			} else {
 				v.setPadding(tabPadding, 0, tabPadding, 0);
 			}
+			
+			boolean disabled = isTabDisabled(i);
+
+			v.setEnabled(!disabled);
 
 			if (v instanceof TextView) {
 
 				TextView tab = (TextView) v;
 				tab.setTextSize(TypedValue.COMPLEX_UNIT_PX, tabTextSize);
 				tab.setTypeface(tabTypeface, tabTypefaceStyle);
-				tab.setTextColor(tabTextColor);
+				updateTextColor(tab, i, disabled);
 
 				// setAllCaps() is only available from API 14, so the upper case is made manually if we are on a
 				// pre-ICS-build
@@ -409,6 +419,7 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
 		public void onPageScrollStateChanged(int state) {
 			if (state == ViewPager.SCROLL_STATE_IDLE) {
 				scrollToChild(pager.getCurrentItem(), 0);
+				updateIndicatorTextColor();
 			}
 
 			if (delegatePageListener != null) {
@@ -418,11 +429,35 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
 
 		@Override
 		public void onPageSelected(int position) {
+			updateIndicatorTextColor();
 			if (delegatePageListener != null) {
 				delegatePageListener.onPageSelected(position);
 			}
 		}
 
+	}
+
+	private void updateIndicatorTextColor() {
+		if (indicatorTextColor != -1) {
+			for (int i = 0; i < tabsContainer.getChildCount(); i++) {
+				View view = (TextView) tabsContainer.getChildAt(i);
+				
+				boolean disabled = isTabDisabled(i);
+				if (view != null && view instanceof TextView ) {
+					updateTextColor((TextView) view, i, disabled);
+				} 
+			}
+		}
+	}
+	
+	private void updateTextColor(TextView textView, int position, boolean disabled) {
+		if (disabled && disabledTextColor != -1) {
+			textView.setTextColor(disabledTextColor);
+		} else if (indicatorTextColor != -1 && pager.getCurrentItem() == position) {
+			textView.setTextColor(indicatorTextColor);
+		} else {
+			textView.setTextColor(tabTextColor);					
+		}
 	}
 
 	public void setIndicatorColor(int indicatorColor) {
@@ -549,6 +584,30 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
 		updateTabStyles();
 	}
 
+	public void setIndicatorTextColor(int color) {
+		this.indicatorTextColor = color;
+		updateTabStyles();
+	}
+		
+	public void setIndicatorTextColorResource(int colorResId) {
+		this.indicatorTextColor = getContext().getResources().getColor(colorResId);
+		updateTabStyles();
+	}
+
+	public void setDisabledTextColor(int color) {
+		this.disabledTextColor = color;
+		updateTabStyles();
+	}
+		
+	public void setDisabledTextColorResource(int colorResId) {
+		this.disabledTextColor = getContext().getResources().getColor(colorResId);
+		updateTabStyles();
+	}
+	
+	public int getIndicatorTextColor() {
+		return this.indicatorTextColor;
+	}
+
 	public void setTabBackground(int resId) {
 		this.tabBackgroundResId = resId;
 	}
@@ -564,6 +623,18 @@ public class PagerSlidingTabStrip extends HorizontalScrollView {
 
 	public int getTabPaddingLeftRight() {
 		return tabPadding;
+	}
+	
+	public void setDisabledTabs(List<Integer> indices) {
+		this.disabledIndices = indices;
+		updateTabStyles();
+	}
+	
+	public boolean isTabDisabled(int position) {
+		if (disabledIndices != null) {
+			return disabledIndices.contains(position);
+		}
+		return false;
 	}
 
 	@Override

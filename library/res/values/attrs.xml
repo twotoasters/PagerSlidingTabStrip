@@ -13,6 +13,8 @@
         <attr name="tabBackground" format="reference" />
         <attr name="shouldExpand" format="boolean" />
         <attr name="textAllCapsPSTS" format="boolean" />
+        <attr name="indicatorTextColor" format="color" />
+        <attr name="disabledTextColor" format="color" />
     </declare-styleable>
 
 </resources>
